@@ -54,20 +54,26 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     private var spinnyNode : SKShapeNode?
     
     let player = SKSpriteNode(imageNamed: "player")
+    var monstersDestroyed = 0
+    let enemy = SKSpriteNode(imageNamed: "player")
     
     override func didMove(to view: SKView) {
         
         // Get label node from scene and store it for use later
-        backgroundColor = SKColor.cyan
+        backgroundColor = SKColor.lightGray
         
-        player.position = CGPoint(x: size.width*0.1, y: size.height * 0.5)
+        player.position = CGPoint(x: size.width*0.1, y: size.height*0.5)
+        enemy.position = CGPoint(x: size.width*0.9, y: size.height*0.5)
         
         addChild(player)
+        addChild(enemy)
         
         physicsWorld.gravity = CGVector.zero
         physicsWorld.contactDelegate = self
         
         run(SKAction.repeatForever(SKAction.sequence([SKAction.run(addMonster), SKAction.wait(forDuration: 1.0)])))
+        run(SKAction.repeatForever(SKAction.sequence([SKAction.run(leftMonster), SKAction.wait(forDuration: 1.0)])))
+        
     }
     
     func random() -> CGFloat {
@@ -76,6 +82,29 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func random(min: CGFloat, max: CGFloat) -> CGFloat {
         return random()*(max-min)+min
+    }
+    
+    func leftMonster() {
+        let mmonster = SKSpriteNode(imageNamed: "monster")
+        let actualYs = random(min: mmonster.size.height/2, max: size.height - mmonster.size.height/2)
+        
+        mmonster.position = CGPoint(x: 0, y: actualYs)
+        
+        addChild(mmonster)
+        
+        mmonster.physicsBody = SKPhysicsBody(rectangleOf: mmonster.size)
+        mmonster.physicsBody?.isDynamic = true
+        mmonster.physicsBody?.categoryBitMask = PhysicsCategory.Monster
+        mmonster.physicsBody?.contactTestBitMask = PhysicsCategory.Projectile
+        mmonster.physicsBody?.collisionBitMask = PhysicsCategory.None
+        
+        let actualDur = random(min: CGFloat(5.0), max: CGFloat(10.0))
+        
+        let actionsMove = SKAction.move(to: CGPoint(x: mmonster.size.width/2+400, y: actualYs), duration: TimeInterval(actualDur))
+        
+        let actionsMoveDone = SKAction.removeFromParent()
+        
+        mmonster.run(SKAction.sequence([actionsMove, actionsMoveDone]))
     }
     
     func addMonster() {
@@ -93,13 +122,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         monster.physicsBody?.contactTestBitMask = PhysicsCategory.Projectile
         monster.physicsBody?.collisionBitMask = PhysicsCategory.None
         
-        let actualDuration = random(min: CGFloat(2.0), max: CGFloat(4.0))
+        let actualDuration = random(min: CGFloat(5.0), max: CGFloat(10.0))
         
         let actionMove = SKAction.move(to: CGPoint(x: -monster.size.width/2, y:actualY), duration: TimeInterval(actualDuration))
         
         let actionMoveDone = SKAction.removeFromParent()
         
-        monster.run(SKAction.sequence([actionMove, actionMoveDone]))
+        let loseAction = SKAction.run() {
+            let reveal = SKTransition.flipHorizontal(withDuration: 0.5)
+            let gameOverScene = GameOverScene(size: self.size, won: false)
+            self.view?.presentScene(gameOverScene, transition: reveal)
+        }
+        
+        monster.run(SKAction.sequence([actionMove, loseAction, actionMoveDone]))
     }
     
     
@@ -132,7 +167,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             label.run(SKAction.init(named: "Pulse")!, withKey: "fadeInOut")
         }
         
-        for t in touches { self.touchDown(atPoint: t.location(in: self)) }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -152,6 +186,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         // Called before each frame is rendered
     }
     
+    //this action takes place when the player releases their finger from the screen
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else
         {
@@ -171,7 +206,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         let offset = touchLocation - projectile.position
         
-        if (offset.x < 0) {return}
+        //by commenting out the line below, the creature can now shoot in the backwards direction
+        //if (offset.x < 0) {return}
         
         addChild(projectile)
         
@@ -181,7 +217,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         let realDest = shootAmount + projectile.position
         
-        let actionMove = SKAction.move(to: realDest, duration: 2.0)
+        let actionMove = SKAction.move(to: realDest, duration: 5.0)
         let actionMoveDone = SKAction.removeFromParent()
         
         projectile.run(SKAction.sequence([actionMove, actionMoveDone]))
@@ -189,9 +225,21 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     //is this supposed to be inside of the touchesEnded method?
     func projectileDidCollideWithMonster(projectile: SKSpriteNode, monster: SKSpriteNode) {
-        print("Howdy from Wyoming")
+        print(arc4random_uniform(20))
         projectile.removeFromParent()
         monster.removeFromParent()
+        if player.position == CGPoint(x: size.width*0.1, y: size.height*0.5) {
+            player.position = CGPoint(x: size.width*0.5, y: size.height*0.5)
+        }else{
+            player.position = CGPoint(x: size.width*0.3, y: size.height*0.7)
+        }
+        
+        monstersDestroyed += 1
+        if (monstersDestroyed > 3) {
+            let reveal = SKTransition.flipHorizontal(withDuration: 0.5)
+            let gameOverScene = GameOverScene(size: self.size, won: true)
+            self.view?.presentScene(gameOverScene, transition: reveal)
+        }
     }
     
     //does this belong inside of the touchesEnded method as well?
