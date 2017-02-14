@@ -1,5 +1,5 @@
 //
-//  GameOverScene.swift
+//  StartScene.swift
 //  wenderlich2
 //
 //  Created by Hector Otero on 2/13/17.
@@ -9,21 +9,20 @@
 import Foundation
 import SpriteKit
 
-class GameOverScene: SKScene {
+class StartScene: SKScene{
     
-    init(size: CGSize, won:Bool) {
-        
+    override init(size: CGSize) {
         super.init(size: size)
         
-        backgroundColor = SKColor.white
+        backgroundColor = SKColor.lightGray
         
-        let message = won ? "You won!" : "You lose!"
+        let message = "Get Ready To Start a New Game!"
         
         let label = SKLabelNode(fontNamed: "Chalkduster")
         
         label.text = message
         
-        label.fontSize = 40
+        label.fontSize = 21
         
         label.fontColor = SKColor.black
         
@@ -31,10 +30,11 @@ class GameOverScene: SKScene {
         
         addChild(label)
         
-        run(SKAction.sequence([SKAction.wait(forDuration: 3.0), SKAction.run(){
+        run(SKAction.sequence([SKAction.wait(forDuration: 5.0),
+            SKAction.run(){
             let reveal = SKTransition.flipHorizontal(withDuration: 0.5)
             let scene = GameScene(size:size)
-            self.view?.presentScene(scene, transition: reveal)
+                self.view?.presentScene(scene, transition: reveal)
             }
         ]))
     }
@@ -42,5 +42,4 @@ class GameOverScene: SKScene {
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
 }
